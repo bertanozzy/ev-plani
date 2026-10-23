@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Ev Planı</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Ev Planı">
+<meta name="theme-color" content="#f6f4f0">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<style>
+  html,body{margin:0;padding:0;height:100%;background:#f6f4f0;overflow:hidden}
+  #cerceve{position:fixed;left:0;right:0;top:env(safe-area-inset-top);bottom:env(safe-area-inset-bottom);
+    width:100%;height:calc(100% - env(safe-area-inset-top) - env(safe-area-inset-bottom));border:0;display:block;background:#f6f4f0}
+  #mesaj{display:none;font:17px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#555;
+    text-align:center;padding:80px 24px}
+</style>
+</head>
+<body>
+<iframe id="cerceve" title="Ev Planı" allow="clipboard-write"></iframe>
+<div id="mesaj">🔒<br>Bu bağlantı eksik.<br>Size gönderilen kişisel linki kullanın.</div>
+<script>
+(function(){
+  var UYGULAMA="https://script.google.com/macros/s/AKfycbywdIsoV4g096VtI6a61ffaanK0dTkppj7zf9_eu9eW3pTZISjxWVFn-INJ1rbzjIkL/exec";
+  var k=new URLSearchParams(location.search).get("k")||"";
+  try{
+    if(k) localStorage.setItem("evplani_k",k);
+    else k=localStorage.getItem("evplani_k")||"";
+  }catch(e){}
+  if(!k){ document.getElementById("cerceve").style.display="none"; document.getElementById("mesaj").style.display="block"; return; }
+  if(!new URLSearchParams(location.search).get("k")){
+    try{ history.replaceState(null,"",location.pathname+"?k="+encodeURIComponent(k)); }catch(e){}
+  }
+  document.getElementById("cerceve").src=UYGULAMA+"?k="+encodeURIComponent(k);
+})();
+</script>
+</body>
+</html>

@@ -11,31 +11,69 @@
 <meta name="theme-color" content="#f6f4f0">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon-192.png">
-<link rel="manifest" href="manifest.json">
 <style>
-  html,body{margin:0;padding:0;height:100%;background:#f6f4f0;overflow:hidden}
-  #cerceve{position:fixed;left:0;right:0;top:env(safe-area-inset-top);bottom:env(safe-area-inset-bottom);
-    width:100%;height:calc(100% - env(safe-area-inset-top) - env(safe-area-inset-bottom));border:0;display:block;background:#f6f4f0}
-  #mesaj{display:none;font:17px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#555;
-    text-align:center;padding:80px 24px}
+  html,body{margin:0;background:#f6f4f0}
+  #durum{font:18px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#555;text-align:center;padding:90px 24px}
+  #durum button{margin-top:18px;font:inherit;font-weight:700;padding:14px 22px;border-radius:14px;border:none;background:#191714;color:#fff}
 </style>
 </head>
 <body>
-<iframe id="cerceve" title="Ev Planı" allow="clipboard-write"></iframe>
-<div id="mesaj">🔒<br>Bu bağlantı eksik.<br>Size gönderilen kişisel linki kullanın.</div>
+<div id="durum">Yükleniyor…</div>
 <script>
 (function(){
-  var UYGULAMA="https://script.google.com/macros/s/AKfycbywdIsoV4g096VtI6a61ffaanK0dTkppj7zf9_eu9eW3pTZISjxWVFn-INJ1rbzjIkL/exec";
-  var k=new URLSearchParams(location.search).get("k")||"";
-  try{
-    if(k) localStorage.setItem("evplani_k",k);
-    else k=localStorage.getItem("evplani_k")||"";
-  }catch(e){}
-  if(!k){ document.getElementById("cerceve").style.display="none"; document.getElementById("mesaj").style.display="block"; return; }
-  if(!new URLSearchParams(location.search).get("k")){
-    try{ history.replaceState(null,"",location.pathname+"?k="+encodeURIComponent(k)); }catch(e){}
+  var API="https://script.google.com/macros/s/AKfycbywdIsoV4g096VtI6a61ffaanK0dTkppj7zf9_eu9eW3pTZISjxWVFn-INJ1rbzjIkL/exec";
+  var durum=document.getElementById("durum");
+  var qk=new URLSearchParams(location.search).get("k")||"";
+  var k=qk;
+  try{ if(k) localStorage.setItem("evplani_k",k); else k=localStorage.getItem("evplani_k")||""; }catch(e){}
+
+  if(!k){
+    durum.innerHTML="🔒<br>Kişisel link bulunamadı.<br><br>Size gönderilen linki Safari'de açın,<br>sonra Paylaş → Ana Ekrana Ekle deyin.";
+    return;
   }
-  document.getElementById("cerceve").src=UYGULAMA+"?k="+encodeURIComponent(k);
+  if(!qk){ try{ history.replaceState(null,"",location.pathname+"?k="+encodeURIComponent(k)); }catch(e){} }
+
+  // Ana ekrana eklenince de kişisel link korunsun (Android için)
+  try{
+    var man={name:"Ev Planı",short_name:"Ev Planı",display:"standalone",background_color:"#f6f4f0",theme_color:"#f6f4f0",
+      start_url:location.origin+location.pathname+"?k="+encodeURIComponent(k),scope:location.origin+location.pathname,
+      icons:[{src:location.origin+location.pathname+"icon-192.png",sizes:"192x192",type:"image/png"},
+             {src:location.origin+location.pathname+"icon-512.png",sizes:"512x512",type:"image/png"}]};
+    var l=document.createElement("link"); l.rel="manifest";
+    l.href="data:application/manifest+json,"+encodeURIComponent(JSON.stringify(man));
+    document.head.appendChild(l);
+  }catch(e){}
+
+  // Uygulamanın sunucu çağrıları (google.script.run yerine)
+  var SHIM='<script>(function(){var API='+JSON.stringify(API)+';'+
+    'window.google={script:{get run(){var s=null,f=null,px;var o={withSuccessHandler:function(h){s=h;return px},withFailureHandler:function(h){f=h;return px}};'+
+    'px=new Proxy(o,{get:function(t,p){if(p in t)return t[p];return function(){var a=[].slice.call(arguments);'+
+    'fetch(API+"?fn="+encodeURIComponent(p)+"&a="+encodeURIComponent(JSON.stringify(a))).then(function(r){return r.json()})'+
+    '.then(function(j){if(j&&j.hata!==undefined&&j.sonuc===undefined){f&&f(new Error(j.hata))}else{s&&s(j?j.sonuc:null)}})'+
+    '.catch(function(e){f&&f(e)})}}});return px}}}})();<\/script>';
+  var EK='<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">'+
+    '<meta name="apple-mobile-web-app-title" content="Ev Planı"><title>Ev Planı</title>'+
+    '<link rel="apple-touch-icon" href="apple-touch-icon.png">';
+
+  function yukle(){
+    durum.textContent="Yükleniyor…";
+    fetch(API+"?mod=json&k="+encodeURIComponent(k))
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if(!j || !j.ok || !j.html){
+          durum.innerHTML="🔒<br>Bu bağlantı geçerli değil.<br>Size gönderilen kişisel linki kullanın.";
+          try{ localStorage.removeItem("evplani_k"); }catch(e){}
+          return;
+        }
+        var h=j.html.replace(/<title>[\s\S]*?<\/title>/i,"").replace("<head>","<head>"+EK+SHIM);
+        document.open(); document.write(h); document.close();
+      })
+      .catch(function(){
+        durum.innerHTML="İnternet bağlantısı yok gibi görünüyor.<br><button id='tekrar'>Tekrar dene</button>";
+        document.getElementById("tekrar").onclick=yukle;
+      });
+  }
+  yukle();
 })();
 </script>
 </body>

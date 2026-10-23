@@ -48,7 +48,8 @@
   var SHIM='<script>(function(){var API='+JSON.stringify(API)+';'+
     'window.google={script:{get run(){var s=null,f=null,px;var o={withSuccessHandler:function(h){s=h;return px},withFailureHandler:function(h){f=h;return px}};'+
     'px=new Proxy(o,{get:function(t,p){if(p in t)return t[p];return function(){var a=[].slice.call(arguments);'+
-    'fetch(API+"?fn="+encodeURIComponent(p)+"&a="+encodeURIComponent(JSON.stringify(a))).then(function(r){return r.json()})'+
+    'var q=encodeURIComponent(JSON.stringify(a));'+
+    '(q.length>1500?fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({fn:p,a:a})}):fetch(API+"?fn="+encodeURIComponent(p)+"&a="+q)).then(function(r){return r.json()})'+
     '.then(function(j){if(j&&j.hata!==undefined&&j.sonuc===undefined){f&&f(new Error(j.hata))}else{s&&s(j?j.sonuc:null)}})'+
     '.catch(function(e){f&&f(e)})}}});return px}}}})();<\/script>';
   var EK='<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">'+
@@ -56,6 +57,9 @@
     '<link rel="apple-touch-icon" href="apple-touch-icon.png">';
 
   var SAKLA="evplani_html_"+k;
+  var dokundu=false;
+  window.addEventListener("pointerdown",function(){ dokundu=true; },true);
+  function surum(h){ var m=/name="evp-surum" content="([^"]*)"/.exec(h||""); return m?m[1]:""; }
   function goster(html,taze){
     var h=html.replace(/<title>[\s\S]*?<\/title>/i,"")
               .replace("<head>","<head>"+EK+SHIM+(taze?"<script>window.__TAZE=1<\/script>":""));
@@ -72,7 +76,9 @@
       // Sayfa ayrıştırması bitmeden document.open çalışmaz, o yüzden hazır olmasını bekle.
       if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",function(){ goster(eski,false); });
       else goster(eski,false);
-      getir().then(function(j){ if(j&&j.ok&&j.html){ try{ localStorage.setItem(SAKLA,j.html); }catch(e){} }
+      getir().then(function(j){ if(j&&j.ok&&j.html){ try{ localStorage.setItem(SAKLA,j.html); }catch(e){}
+                                    // Yeni sürüm geldiyse ve kullanıcı henüz dokunmadıysa hemen geç
+                                    if(surum(j.html)!==surum(eski) && !dokundu) goster(j.html,true); }
                                   else if(j&&j.ok===false){ try{ localStorage.removeItem(SAKLA); localStorage.removeItem("evplani_k"); }catch(e){} location.reload(); } })
              .catch(function(){});
       return;

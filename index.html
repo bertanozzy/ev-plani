@@ -55,18 +55,35 @@
     '<meta name="apple-mobile-web-app-title" content="Ev Planı"><title>Ev Planı</title>'+
     '<link rel="apple-touch-icon" href="apple-touch-icon.png">';
 
+  var SAKLA="evplani_html_"+k;
+  function goster(html,taze){
+    var h=html.replace(/<title>[\s\S]*?<\/title>/i,"")
+              .replace("<head>","<head>"+EK+SHIM+(taze?"<script>window.__TAZE=1<\/script>":""));
+    document.open(); document.write(h); document.close();
+  }
+  function getir(){
+    var ev=""; try{ ev=localStorage.getItem("ev")||""; }catch(e){}
+    return fetch(API+"?mod=json&k="+encodeURIComponent(k)+(ev?"&ev="+encodeURIComponent(ev):"")).then(function(r){ return r.json(); });
+  }
   function yukle(){
+    var eski=null; try{ eski=localStorage.getItem(SAKLA); }catch(e){}
+    if(eski){
+      // Saklanan ekranla anında aç; uygulama güncel veriyi kendisi arkadan alır.
+      goster(eski,false);
+      getir().then(function(j){ if(j&&j.ok&&j.html){ try{ localStorage.setItem(SAKLA,j.html); }catch(e){} }
+                                  else if(j&&j.ok===false){ try{ localStorage.removeItem(SAKLA); localStorage.removeItem("evplani_k"); }catch(e){} location.reload(); } })
+             .catch(function(){});
+      return;
+    }
     durum.textContent="Yükleniyor…";
-    fetch(API+"?mod=json&k="+encodeURIComponent(k))
-      .then(function(r){ return r.json(); })
-      .then(function(j){
+    getir().then(function(j){
         if(!j || !j.ok || !j.html){
           durum.innerHTML="🔒<br>Bu bağlantı geçerli değil.<br>Size gönderilen kişisel linki kullanın.";
           try{ localStorage.removeItem("evplani_k"); }catch(e){}
           return;
         }
-        var h=j.html.replace(/<title>[\s\S]*?<\/title>/i,"").replace("<head>","<head>"+EK+SHIM);
-        document.open(); document.write(h); document.close();
+        try{ localStorage.setItem(SAKLA,j.html); }catch(e){}
+        goster(j.html,true);
       })
       .catch(function(){
         durum.innerHTML="İnternet bağlantısı yok gibi görünüyor.<br><button id='tekrar'>Tekrar dene</button>";

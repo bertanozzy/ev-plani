@@ -69,7 +69,9 @@
     var eski=null; try{ eski=localStorage.getItem(SAKLA); }catch(e){}
     if(eski){
       // Saklanan ekranla anında aç; uygulama güncel veriyi kendisi arkadan alır.
-      goster(eski,false);
+      // Sayfa ayrıştırması bitmeden document.open çalışmaz, o yüzden hazır olmasını bekle.
+      if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",function(){ goster(eski,false); });
+      else goster(eski,false);
       getir().then(function(j){ if(j&&j.ok&&j.html){ try{ localStorage.setItem(SAKLA,j.html); }catch(e){} }
                                   else if(j&&j.ok===false){ try{ localStorage.removeItem(SAKLA); localStorage.removeItem("evplani_k"); }catch(e){} location.reload(); } })
              .catch(function(){});

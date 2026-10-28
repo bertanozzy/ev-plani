@@ -23,7 +23,11 @@
 (function(){
   var API="https://script.google.com/macros/s/AKfycbywdIsoV4g096VtI6a61ffaanK0dTkppj7zf9_eu9eW3pTZISjxWVFn-INJ1rbzjIkL/exec";
   var durum=document.getElementById("durum");
-  var qk=new URLSearchParams(location.search).get("k")||"";
+  var qs=new URLSearchParams(location.search), qk=qs.get("k")||"";
+  // Hızlı/çevrimdışı açılış ve telefon bildirimleri için servis çalışanı
+  if("serviceWorker" in navigator){ try{ navigator.serviceWorker.register("sw.js").catch(function(){}); }catch(e){} }
+  // Bildirime dokununca ilgili ev açılsın
+  if(qs.get("ev")){ try{ localStorage.setItem("ev",qs.get("ev")); }catch(e){} }
   var k=qk;
   try{ if(k) localStorage.setItem("evplani_k",k); else k=localStorage.getItem("evplani_k")||""; }catch(e){}
 
@@ -31,8 +35,9 @@
     durum.innerHTML="🔒<br>Kişisel link bulunamadı.<br><br>Size gönderilen linki Safari'de açın,<br>sonra Paylaş → Ana Ekrana Ekle deyin.";
     return;
   }
-  if(!qk){ try{ history.replaceState(null,"",location.pathname+"?k="+encodeURIComponent(k)); }catch(e){} }
+  if(!qk || qs.get("ev")){ try{ history.replaceState(null,"",location.pathname+"?k="+encodeURIComponent(k)); }catch(e){} }
 
+  var MAN="";
   // Ana ekrana eklenince de kişisel link korunsun (Android için)
   try{
     var man={name:"Ev Planı",short_name:"Ev Planı",display:"standalone",background_color:"#f6f4f0",theme_color:"#f6f4f0",
@@ -41,7 +46,7 @@
              {src:location.origin+location.pathname+"icon-512.png",sizes:"512x512",type:"image/png"}]};
     var l=document.createElement("link"); l.rel="manifest";
     l.href="data:application/manifest+json,"+encodeURIComponent(JSON.stringify(man));
-    document.head.appendChild(l);
+    document.head.appendChild(l); MAN=l.href;
   }catch(e){}
 
   // Uygulamanın sunucu çağrıları (google.script.run yerine)
@@ -54,7 +59,7 @@
     '.catch(function(e){f&&f(e)})}}});return px}}}})();<\/script>';
   var EK='<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">'+
     '<meta name="apple-mobile-web-app-title" content="Ev Planı"><title>Ev Planı</title>'+
-    '<link rel="apple-touch-icon" href="apple-touch-icon.png">';
+    '<link rel="apple-touch-icon" href="apple-touch-icon.png">'+(MAN?'<link rel="manifest" href="'+MAN+'">':'');
 
   var SAKLA="evplani_html_"+k;
   var dokundu=false;
